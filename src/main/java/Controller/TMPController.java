@@ -20,7 +20,7 @@ public class TMPController {
         EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
         EntityManager entityManager = entityMangerFactory.createEntityManager();
 //        TypedQuery<HistoryBitcoinDBModel> query = /*(List<HistoryBitcoinDBModel>)*/entityManager.createQuery("SELECT bht FROM HistoryBitcoinDBModel bht where bht.unix_time >= 1388534400 AND bht.unix_time <= 1432944000", HistoryBitcoinDBModel.class);
-        TypedQuery<HistoryBitcoinDBModel> query = /*(List<HistoryBitcoinDBModel>)*/entityManager.createQuery("FROM HistoryBitcoinDBModel order by unix_time desc", HistoryBitcoinDBModel.class).setMaxResults(600);
+        TypedQuery<HistoryBitcoinDBModel> query = /*(List<HistoryBitcoinDBModel>)*/entityManager.createQuery("FROM HistoryBitcoinDBModel order by unix_time desc", HistoryBitcoinDBModel.class).setMaxResults(150);
         List<HistoryBitcoinDBModel> file_bitcoin_data = query.getResultList();
 
         entityManager.close();

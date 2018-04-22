@@ -14,4 +14,17 @@
                 <!--<property name="hibernate.hbm2ddl.auto" value="create"/>-->
             </properties>
            </persistence-unit>
+
+    <persistence-unit name="prediction_bitcoin_currency_table" transaction-type="RESOURCE_LOCAL">
+        <!--<provider>org.hibernate.ejb.HibernatePersistence</provider>-->
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+        <properties>
+            <property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
+            <property name="javax.persistence.jdbc.user" value="bitcoinuser"/>
+            <property name="javax.persistence.jdbc.password" value="1234"/>
+            <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/bazabitcoin"/>
+            <property name="hibernate.dialect" value="org.hibernate.dialect.MySQL5Dialect"/>
+            <!--<property name="hibernate.hbm2ddl.auto" value="create"/>-->
+        </properties>
+    </persistence-unit>
 </persistence>

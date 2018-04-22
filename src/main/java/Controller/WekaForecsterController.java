@@ -1,7 +1,9 @@
 package Controller;
 
+import Model.PredictionCurrencyDBModel;
 import weka.classifiers.evaluation.NumericPrediction;
 import weka.classifiers.functions.SMOreg;
+import weka.classifiers.timeseries.TSForecaster;
 import weka.classifiers.timeseries.WekaForecaster;
 import weka.classifiers.timeseries.eval.TSEvaluation;
 import weka.classifiers.timeseries.eval.graph.JFreeChartDriver;
@@ -10,9 +12,15 @@ import weka.core.converters.CSVLoader;
 
 
 import javax.lang.model.util.ElementScanner6;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+import javax.persistence.Query;
 import javax.swing.*;
 import java.io.File;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class WekaForecsterController {
@@ -35,8 +43,8 @@ public class WekaForecsterController {
         int start_idx=4000;
         int window_size=4;*/
 
-        int train_size=300;
-        int test_size=298;
+        int train_size=74;
+        int test_size=73;
         int start_idx=1;
         int window_size=1;
 
@@ -124,23 +132,45 @@ public class WekaForecsterController {
         steps.add(test_size);
         System.out.println("Ending of prediction");
         // output the predictions
+        EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("prediction_bitcoin_currency_table");
+        EntityManager entityManager = entityMangerFactory.createEntityManager();
+        //teuncate table before new insertion
+
+        Query query = entityManager.createNativeQuery("truncate table PredictionCurrencyDBModel");
+        query.executeUpdate();
+
+        long unixTime = System.currentTimeMillis() / 1000L;
+
         for (int i = 0; i < forecast.size(); i++) {
             List<NumericPrediction> predsAtStep = forecast.get(i);
             NumericPrediction predForTarget = predsAtStep.get(0);
             System.out.println("" + predForTarget.predicted() + " ");
-        }
-        /*JFreeChartDriver driver= new JFreeChartDriver();
-        JPanel panel=tse.graphFutureForecastOnTraining(driver, forecaster,targets);
-        //JPanel panel=tse.graphPredictionsForStepsOnTraining(driver.getDefaultDriver(), (TSForecaster)forecaster, "temperatura",steps , 0);
-        driver.saveChartToFile(panel, "wykres_czasu_flow.png", 1200, 800);
+            PredictionCurrencyDBModel bitcoinObj = new PredictionCurrencyDBModel();
+            bitcoinObj.setUnix_time(unixTime);
 
-        JFrame frame = new JFrame();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(panel);
-        panel.setLayout(layout);
-        frame.setSize(1600, 1000);
-        frame.add(panel);
-        frame.setVisible(true);*/
+            bitcoinObj.setPrice(predForTarget.predicted());
+            bitcoinObj.setCurrency("USD");
+            bitcoinObj.setUse(false);
+            bitcoinObj.setDate(new java.util.Date(unixTime*1000L));
+            unixTime+=86400;
+            entityManager.getTransaction().begin();
+            entityManager.persist(bitcoinObj);
+            entityManager.getTransaction().commit();
+        }
+        entityManager.close();
+
+//        JFreeChartDriver driver= new JFreeChartDriver();
+//        //JPanel panel=tse.graphFutureForecastOnTraining(driver, forecaster,targets);
+//        JPanel panel=tse.graphPredictionsForStepsOnTraining(driver.getDefaultDriver(), (TSForecaster)forecaster, "price",steps , 0);
+//        driver.saveChartToFile(panel, "wykres_czasu_flow.png", 1200, 800);
+//
+//        JFrame frame = new JFrame();
+//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(panel);
+//        panel.setLayout(layout);
+//        frame.setSize(1600, 1000);
+//        frame.add(panel);
+//        frame.setVisible(true);
 
     }
 
