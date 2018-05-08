@@ -4,7 +4,11 @@ import DTO.HistoryJsonUpdate;
 import DTO.JsonBitcoin;
 import DTO.JsonModelBitcoin;
 import Model.HistoryBitcoinDBModel;
+import Model.Money;
+import Model.PredictionCurrencyDBModel;
+import org.apache.commons.math3.exception.NullArgumentException;
 import org.apache.log4j.Logger;
+import org.hibernate.query.Query;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,7 +20,12 @@ import org.springframework.web.client.RestTemplate;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
+import java.sql.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 
 @RestController
@@ -91,6 +100,36 @@ public class JsonController {
         WekaForecsterController wekaForecsterController = new WekaForecsterController();
         wekaForecsterController.forecastTimeSeries();
     }
+
+    @GetMapping("database")
+    public Money getPrediction() throws Exception {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Calendar dateParameter = Calendar.getInstance();
+        PredictionCurrencyDBModel currencyDBModel;
+        EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("prediction_bitcoin_currency_table");
+        EntityManager entityManager = entityMangerFactory.createEntityManager();
+        do {
+            TypedQuery<PredictionCurrencyDBModel> query = entityManager.createQuery("SELECT p from PredictionCurrencyDBModel p where date = :dateParameter", PredictionCurrencyDBModel.class).setParameter("dateParameter", dateFormat.format(dateParameter));
+            try {
+                currencyDBModel = query.getSingleResult();
+                if (currencyDBModel == null) {
+                    throw new NullPointerException();
+                }
+                if (currencyDBModel.getPrice() <= 0) {
+                    setPrediction();
+                } else {
+                    break;
+                }
+            } catch (NullPointerException e) {
+                setPrediction();
+            } catch (NullArgumentException e) {
+                setPrediction();
+            }
+        } while(true);
+
+        return new Money(currencyDBModel.getCurrency(), currencyDBModel.getPrice());
+    }
+
 }
 //https://blockchain.info/charts/market-price?timespan=9years&format=json
 //https://blockchain.info/charts/market-price?format=json
