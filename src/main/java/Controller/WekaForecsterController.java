@@ -1,10 +1,9 @@
 package Controller;
 
 import Model.PredictionCurrencyDBModel;
-import org.hibernate.Session;
+import Model.PredictionParametersModel;
 import weka.classifiers.evaluation.NumericPrediction;
 import weka.classifiers.functions.SMOreg;
-import weka.classifiers.timeseries.TSForecaster;
 import weka.classifiers.timeseries.WekaForecaster;
 import weka.classifiers.timeseries.eval.TSEvaluation;
 import weka.classifiers.timeseries.eval.graph.JFreeChartDriver;
@@ -12,14 +11,9 @@ import weka.core.Instances;
 import weka.core.converters.CSVLoader;
 
 
-import javax.lang.model.util.ElementScanner6;
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
-import javax.persistence.Query;
+import javax.persistence.*;
 import javax.swing.*;
 import java.io.File;
-import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -41,15 +35,19 @@ public class WekaForecsterController {
         //8733,31/12/2014,23,11.25
         System.out.println(data.toSummaryString());
 
-        /*int train_size=30*24;
-        int test_size=4*24;
-        int start_idx=4000;
-        int window_size=4;*/
+//        train_size > test_size*window_size
 
-        int train_size=74;
-        int test_size=73;
+        EntityManagerFactory entityMangerFactory_pp = Persistence.createEntityManagerFactory("prediction_parameters");
+        EntityManager entityManager_pp = entityMangerFactory_pp.createEntityManager();
+        TypedQuery<PredictionParametersModel> query = entityManager_pp.createQuery("Select pp from PredictionParametersModel pp order by id DESC", PredictionParametersModel.class).setMaxResults(1);
+        PredictionParametersModel predictionParameters = query.getSingleResult();
+        entityManager_pp.close();
+        entityMangerFactory_pp.close();
+        System.out.println(predictionParameters.toString());
+        int train_size = predictionParameters.getTrain_size();
+        int test_size = predictionParameters.getTest_size();
         int start_idx=1;
-        int window_size=1;
+        int window_size = predictionParameters.getWindow_size();
 
         Instances train = new Instances(data, start_idx, train_size);
         Instances test = new Instances(data, start_idx+train_size+1, test_size);

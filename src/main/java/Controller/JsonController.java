@@ -8,7 +8,6 @@ import Model.Money;
 import Model.PredictionCurrencyDBModel;
 import org.apache.commons.math3.exception.NullArgumentException;
 import org.apache.log4j.Logger;
-import org.hibernate.query.Query;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,12 +20,10 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
-//import java.sql.Date;
 import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 
 
 @RestController
@@ -101,7 +98,7 @@ public class JsonController {
         }
     }
 
-    @GetMapping("prediction")
+    @GetMapping("defaultPrediction")
     public void setPrediction() throws Exception{
         TMPController.create_file_with_data();
         WekaForecsterController wekaForecsterController = new WekaForecsterController();
@@ -116,11 +113,8 @@ public class JsonController {
         PredictionCurrencyDBModel currencyDBModel;
         EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("prediction_bitcoin_currency_table");
         EntityManager entityManager = entityMangerFactory.createEntityManager();
-        System.out.println("Heloooooooooo");
         do {
-            System.out.println("Heloooooooooo2" + dateFormat.format(dateParameter).getClass());
             TypedQuery<PredictionCurrencyDBModel> query = entityManager.createQuery("SELECT p from PredictionCurrencyDBModel p where date = :dateParameter", PredictionCurrencyDBModel.class).setParameter("dateParameter", new SimpleDateFormat("yyyy-MM-dd").parse(dateFormat.format(dateParameter)));
-            System.out.println("Heloooooooooo3");
             try {
                 currencyDBModel = query.getSingleResult();
                 if (currencyDBModel == null) {
