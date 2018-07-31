@@ -1,6 +1,7 @@
 package Controller;
 
 import Model.PredictionCurrencyDBModel;
+import org.hibernate.Session;
 import weka.classifiers.evaluation.NumericPrediction;
 import weka.classifiers.functions.SMOreg;
 import weka.classifiers.timeseries.TSForecaster;
@@ -19,6 +20,8 @@ import javax.persistence.Query;
 import javax.swing.*;
 import java.io.File;
 import java.math.BigDecimal;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -136,8 +139,8 @@ public class WekaForecsterController {
         EntityManager entityManager = entityMangerFactory.createEntityManager();
         //teuncate table before new insertion
 
-        Query query = entityManager.createNativeQuery("truncate table PredictionCurrencyDBModel");
-        query.executeUpdate();
+//        Query query = entityManager.createNativeQuery("truncate table PredictionCurrencyDBModel");
+//        query.executeUpdate();
 
         long unixTime = System.currentTimeMillis() / 1000L;
 
@@ -153,8 +156,17 @@ public class WekaForecsterController {
             bitcoinObj.setUse(false);
             bitcoinObj.setDate(new java.util.Date(unixTime*1000L));
             unixTime+=86400;
+            SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd");
+            String s = dt.format(bitcoinObj.getDate());
+            DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+            Date query_date = format.parse(s);
             entityManager.getTransaction().begin();
-            entityManager.persist(bitcoinObj);
+            PredictionCurrencyDBModel is_exist = entityManager.find(PredictionCurrencyDBModel.class, query_date);
+            if (is_exist != null){
+                is_exist.setPrice(bitcoinObj.getPrice());
+            }else{
+                entityManager.persist(bitcoinObj);
+            }
             entityManager.getTransaction().commit();
         }
         entityManager.close();

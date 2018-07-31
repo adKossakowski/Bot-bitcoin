@@ -21,7 +21,8 @@ import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
-import java.sql.Date;
+//import java.sql.Date;
+import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -48,6 +49,12 @@ public class JsonController {
         JsonBitcoin currencyJson = restTemplate.getForObject("https://blockchain.info/pl/ticker", JsonBitcoin.class);
         System.out.println(currencyJson.toString());
 
+    }
+
+    @PostMapping("updateBotTable")
+    public void postBotMoney(){
+        EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
+        EntityManager entityManager = entityMangerFactory.createEntityManager();
     }
 
     @GetMapping("updateJdbc")
@@ -104,12 +111,16 @@ public class JsonController {
     @GetMapping("database")
     public Money getPrediction() throws Exception {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        Calendar dateParameter = Calendar.getInstance();
+//        Calendar dateParameter = Calendar.getInstance();
+        Date dateParameter = new Date();
         PredictionCurrencyDBModel currencyDBModel;
         EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("prediction_bitcoin_currency_table");
         EntityManager entityManager = entityMangerFactory.createEntityManager();
+        System.out.println("Heloooooooooo");
         do {
-            TypedQuery<PredictionCurrencyDBModel> query = entityManager.createQuery("SELECT p from PredictionCurrencyDBModel p where date = :dateParameter", PredictionCurrencyDBModel.class).setParameter("dateParameter", dateFormat.format(dateParameter));
+            System.out.println("Heloooooooooo2" + dateFormat.format(dateParameter).getClass());
+            TypedQuery<PredictionCurrencyDBModel> query = entityManager.createQuery("SELECT p from PredictionCurrencyDBModel p where date = :dateParameter", PredictionCurrencyDBModel.class).setParameter("dateParameter", new SimpleDateFormat("yyyy-MM-dd").parse(dateFormat.format(dateParameter)));
+            System.out.println("Heloooooooooo3");
             try {
                 currencyDBModel = query.getSingleResult();
                 if (currencyDBModel == null) {

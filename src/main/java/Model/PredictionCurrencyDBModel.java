@@ -12,7 +12,7 @@ import java.util.Date;
 @Table(name="prediction_bitcoin_currency_table")
 public class PredictionCurrencyDBModel {
 
-    @Id
+
     private long unix_time;
 //    @Column
     private String currency;
@@ -21,6 +21,7 @@ public class PredictionCurrencyDBModel {
 //    @Column
     private Boolean isUse;
 //    @Column
+    @Id
     private Date date;
 
 
