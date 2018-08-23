@@ -65,6 +65,10 @@ public class HistoryBitcoinDBModel {
     public HistoryBitcoinDBModel() {
     }
 
+    public static int compare(HistoryBitcoinDBModel a, HistoryBitcoinDBModel b) {
+        return a.date.compareTo(b.date);
+    }
+
     @Override
     public String toString() {
         return "HistoryBitcoinDBModel{" +

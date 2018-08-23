@@ -3,27 +3,25 @@ package Controller;
 import DTO.HistoryJsonUpdate;
 import DTO.JsonBitcoin;
 import DTO.JsonModelBitcoin;
-import Model.HistoryBitcoinDBModel;
-import Model.Money;
-import Model.PredictionCurrencyDBModel;
+import Model.*;
+import com.sun.xml.internal.xsom.impl.scd.Iterators;
 import org.apache.commons.math3.exception.NullArgumentException;
 import org.apache.log4j.Logger;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
 
 
 @RestController
@@ -36,6 +34,18 @@ public class JsonController {
     HistoryJsonUpdate jsonUpdate;
     EntityManagerFactory entityMangerFactory;
     HistoryBitcoinDBModel bitcoinObj;
+
+    @GetMapping(value="predictionParamters", produces = MediaType.APPLICATION_JSON_VALUE)
+    public PredictionParametersModel getPredictionParameters(){
+        EntityManagerFactory entityMangerFactory_pp = Persistence.createEntityManagerFactory("prediction_parameters");
+        EntityManager entityManager_pp = entityMangerFactory_pp.createEntityManager();
+        TypedQuery<PredictionParametersModel> query = entityManager_pp.createQuery("Select pp from PredictionParametersModel pp order by id DESC", PredictionParametersModel.class).setMaxResults(1);
+        PredictionParametersModel predictionParameters = query.getSingleResult();
+        entityManager_pp.close();
+        entityMangerFactory_pp.close();
+        System.out.println(predictionParameters.toString());
+        return predictionParameters;
+    }
 
     @GetMapping(value = "/update")
     public void updateCurrency(){
@@ -105,6 +115,22 @@ public class JsonController {
         wekaForecsterController.forecastTimeSeries();
     }
 
+    @GetMapping("dedicatedPrediction")
+    public void setPredictionWithParameters(@PathVariable("trainingSet") int trainingSet,
+                                            @PathVariable("testingSet") int testingSet,
+                                            @PathVariable("predictionWindow") int predictionWindow) throws Exception{
+
+        EntityManagerFactory entityMangerFactory_pp = Persistence.createEntityManagerFactory("prediction_parameters");
+        EntityManager entityManager_pp = entityMangerFactory_pp.createEntityManager();
+        PredictionParametersModel pp = new PredictionParametersModel(trainingSet, testingSet, predictionWindow, new Date());
+        entityManager_pp.persist(pp);
+        entityManager_pp.close();
+        entityMangerFactory_pp.close();
+        TMPController.create_file_with_data();
+        WekaForecsterController wekaForecsterController = new WekaForecsterController();
+        wekaForecsterController.forecastTimeSeries();
+    }
+
     @GetMapping("database")
     public Money getPrediction() throws Exception {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -118,9 +144,9 @@ public class JsonController {
             try {
                 currencyDBModel = query.getSingleResult();
                 if (currencyDBModel == null) {
-                    throw new NullPointerException();
+                    setPrediction();
                 }
-                if (currencyDBModel.getPrice() <= 0) {
+                if (currencyDBModel.getPrice().compareTo(new BigDecimal(0)) <= 0) {
                     setPrediction();
                 } else {
                     break;
@@ -133,6 +159,28 @@ public class JsonController {
         } while(true);
 
         return new Money(currencyDBModel.getCurrency(), currencyDBModel.getPrice());
+    }
+
+    @GetMapping("chartData")
+    public ArrayList<ChartDataJson> getChartData() throws Exception {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Date dateParameter = new Date();
+
+        EntityManagerFactory predictionsEntityManagerFactory = Persistence.createEntityManagerFactory("prediction_bitcoin_currency_table");
+        EntityManager predictionEntityManager = predictionsEntityManagerFactory.createEntityManager();
+        TypedQuery<PredictionCurrencyDBModel> predictionQuery = predictionEntityManager.createQuery("SELECT p from PredictionCurrencyDBModel p where date < :dateParameter order by :dateParameter DESC", PredictionCurrencyDBModel.class).setParameter("dateParameter", new SimpleDateFormat("yyyy-MM-dd").parse(dateFormat.format(dateParameter)));
+        ArrayList<PredictionCurrencyDBModel> predictions = new ArrayList<>(predictionQuery.getResultList());
+
+        EntityManagerFactory currencyEntityManagerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
+        EntityManager currencyEntityManager = currencyEntityManagerFactory.createEntityManager();
+        TypedQuery<HistoryBitcoinDBModel> currencyQuery = currencyEntityManager.createQuery("SELECT p from HistoryBitcoinDBModel p where date < :dateParameter order by :dateParameter DESC", HistoryBitcoinDBModel.class)
+                .setParameter("dateParameter", new SimpleDateFormat("yyyy-MM-dd").parse(dateFormat.format(dateParameter)))
+                .setMaxResults(predictions.size());
+        ArrayList<HistoryBitcoinDBModel> currency = new ArrayList<>(currencyQuery.getResultList());
+
+
+
+        return ChartData.jsonParser(predictions, currency);
     }
 
 }

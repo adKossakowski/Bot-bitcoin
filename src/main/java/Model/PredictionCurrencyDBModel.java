@@ -7,23 +7,40 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.Objects;
 
 @Entity
 @Table(name="prediction_bitcoin_currency_table")
 public class PredictionCurrencyDBModel {
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PredictionCurrencyDBModel that = (PredictionCurrencyDBModel) o;
+        return Objects.equals(date, that.date);
+    }
+
+    public static int compare(PredictionCurrencyDBModel a, PredictionCurrencyDBModel b) {
+        return a.date.compareTo(b.date);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(date);
+    }
 
     private long unix_time;
 //    @Column
     private String currency;
 //    @Column
-    private double price;
+    private BigDecimal price;
 //    @Column
     private Boolean isUse;
 //    @Column
     @Id
     private Date date;
-
 
     public Date getDate() {
         return date;
@@ -59,11 +76,11 @@ public class PredictionCurrencyDBModel {
         this.currency = currency;
     }
 
-    public double getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(double price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 }

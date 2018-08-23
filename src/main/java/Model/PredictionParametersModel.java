@@ -3,6 +3,7 @@ package Model;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import java.util.Comparator;
 import java.util.Date;
 
 @Entity
@@ -23,8 +24,7 @@ public class PredictionParametersModel {
     public PredictionParametersModel() {
     }
 
-    public PredictionParametersModel(int id, int train_size, int test_size, int window_size, Date updated_at) {
-        this.id = id;
+    public PredictionParametersModel(int train_size, int test_size, int window_size, Date updated_at) {
         this.train_size = train_size;
         this.test_size = test_size;
         this.window_size = window_size;
