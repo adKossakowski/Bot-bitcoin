@@ -7,7 +7,9 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.sql.Date;
+//import java.util.Date;
+
 
 @Entity
 @Table(name="bitcoin_history_table")

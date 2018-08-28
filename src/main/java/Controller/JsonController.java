@@ -4,7 +4,7 @@ import DTO.HistoryJsonUpdate;
 import DTO.JsonBitcoin;
 import DTO.JsonModelBitcoin;
 import Model.*;
-import com.sun.xml.internal.xsom.impl.scd.Iterators;
+//import com.sun.xml.internal.xsom.impl.scd.Iterators;
 import org.apache.commons.math3.exception.NullArgumentException;
 import org.apache.log4j.Logger;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +22,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 
 @RestController
@@ -85,37 +86,69 @@ public class JsonController {
         System.out.println("DB update success");
     }
 
-    @GetMapping("updateToday")
-    public boolean updateToday(){
+    private void updateToday(int days){
+        StringBuffer sb = new StringBuffer("https://blockchain.info/charts/market-price?timespan=" + days + "days&format=json");
         RestTemplate restTemplate = new RestTemplate();
-        jsonUpdate = restTemplate.getForObject("https://blockchain.info/charts/market-price?timespan=1days&format=json", HistoryJsonUpdate.class);
+        jsonUpdate = restTemplate.getForObject(sb.toString(), HistoryJsonUpdate.class);
         System.out.println(jsonUpdate.toString());
         ArrayList<JsonModelBitcoin> bitcoinArrayList = jsonUpdate.getJsonModelArrayList();
-        EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
-        EntityManager entityManager = entityMangerFactory.createEntityManager();
-        bitcoinObj = new HistoryBitcoinDBModel(jsonUpdate.getCurrency(), bitcoinArrayList.get(0).getBitcoinPrice(), bitcoinArrayList.get(0).getUnixTime(), bitcoinArrayList.get(0).unixTimeToDate());
-        try {
-            System.out.println("Entity manager transaction started");
-            entityManager.getTransaction().begin();
-            entityManager.persist(bitcoinObj);
-            entityManager.getTransaction().commit();
-            System.out.println(bitcoinObj.toString() + "update db succedded");
-            return true;
-        } catch(Exception e){
-            logger.error("Cannot update jdbc for caused by: ");
-            e.printStackTrace();
-            return false;
+//        EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
+//        EntityManager entityManager = entityMangerFactory.createEntityManager();
+        for(JsonModelBitcoin item: bitcoinArrayList) {
+            bitcoinObj = new HistoryBitcoinDBModel(jsonUpdate.getCurrency(), item.getBitcoinPrice(),  item.getUnixTime(), item.unixTimeToDate());
+//            try {
+////                System.out.println("Entity manager transaction started");
+////                entityManager.getTransaction().begin();
+////                entityManager.persist(bitcoinObj);
+////                entityManager.getTransaction().commit();
+////                System.out.println(bitcoinObj.toString() + "update db succedded");
+////            } catch (Exception e) {
+////                logger.error("Cannot update jdbc for caused by: ");
+////                e.printStackTrace();
+////            }
+            System.out.println(bitcoinObj.toString());
         }
+//        entityManager.close();
+//        entityMangerFactory.close();
     }
 
-    @GetMapping("defaultPrediction")
+    private HistoryBitcoinDBModel getLastHistoryBitcoinDBModel(){
+        EntityManagerFactory emf_bitcoin_history = Persistence.createEntityManagerFactory("bitcoin_history_table");
+        EntityManager em_bitcoin_hostory = emf_bitcoin_history.createEntityManager();
+        TypedQuery<HistoryBitcoinDBModel> query = em_bitcoin_hostory.createQuery("Select p from HistoryBitcoinDBModel p order by date DESC", HistoryBitcoinDBModel.class).setMaxResults(1);
+        HistoryBitcoinDBModel last_history_rate = query.getSingleResult();
+        return last_history_rate;
+    }
+
+    private HistoryBitcoinDBModel reload_HistoryBitcoinDBModel(){
+        System.out.println("this.updateJdbc()");
+//        this.updateJdbc();
+        return this.getLastHistoryBitcoinDBModel();
+    }
+
+    @GetMapping("initProgram")
+    public void initProgram(){
+        java.util.Date utilDate = new java.util.Date();
+        HistoryBitcoinDBModel last_history_rate = this.getLastHistoryBitcoinDBModel();
+        if(last_history_rate == null){
+            last_history_rate = this.reload_HistoryBitcoinDBModel();
+        }else if(last_history_rate.getDate() == new java.sql.Date(utilDate.getTime() - 1)){
+            this.updateToday(1);
+        }else{
+            long daydiff = new java.sql.Date(utilDate.getTime() - 1).getTime() - last_history_rate.getDate().getTime();
+            this.updateToday((int)TimeUnit.DAYS.convert(daydiff, TimeUnit.MILLISECONDS));
+        }
+        BotTableController botTableController = new BotTableController();
+    }
+
+    @GetMapping("defaultPrediction")//wywwołanie predykcji dla ostatnich danych z bazy
     public void setPrediction() throws Exception{
         TMPController.create_file_with_data();
         WekaForecsterController wekaForecsterController = new WekaForecsterController();
         wekaForecsterController.forecastTimeSeries();
     }
 
-    @GetMapping("dedicatedPrediction")
+    @GetMapping("dedicatedPrediction")//zmienienie danych do predykcji i wywołanie predykcji
     public void setPredictionWithParameters(@PathVariable("trainingSet") int trainingSet,
                                             @PathVariable("testingSet") int testingSet,
                                             @PathVariable("predictionWindow") int predictionWindow) throws Exception{
@@ -161,25 +194,35 @@ public class JsonController {
         return new Money(currencyDBModel.getCurrency(), currencyDBModel.getPrice());
     }
 
-    @GetMapping("chartData")
+    @GetMapping("chartData")//pobiera dane do wykresu
     public ArrayList<ChartDataJson> getChartData() throws Exception {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Date dateParameter = new Date();
 
         EntityManagerFactory predictionsEntityManagerFactory = Persistence.createEntityManagerFactory("prediction_bitcoin_currency_table");
         EntityManager predictionEntityManager = predictionsEntityManagerFactory.createEntityManager();
-        TypedQuery<PredictionCurrencyDBModel> predictionQuery = predictionEntityManager.createQuery("SELECT p from PredictionCurrencyDBModel p where date < :dateParameter order by :dateParameter DESC", PredictionCurrencyDBModel.class).setParameter("dateParameter", new SimpleDateFormat("yyyy-MM-dd").parse(dateFormat.format(dateParameter)));
+        TypedQuery<PredictionCurrencyDBModel> predictionQuery = predictionEntityManager.createQuery("SELECT p from PredictionCurrencyDBModel p where date < :dateParameter order by date asc", PredictionCurrencyDBModel.class).setParameter("dateParameter", new SimpleDateFormat("yyyy-MM-dd").parse(dateFormat.format(dateParameter)));
         ArrayList<PredictionCurrencyDBModel> predictions = new ArrayList<>(predictionQuery.getResultList());
 
         EntityManagerFactory currencyEntityManagerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
         EntityManager currencyEntityManager = currencyEntityManagerFactory.createEntityManager();
-        TypedQuery<HistoryBitcoinDBModel> currencyQuery = currencyEntityManager.createQuery("SELECT p from HistoryBitcoinDBModel p where date < :dateParameter order by :dateParameter DESC", HistoryBitcoinDBModel.class)
+        TypedQuery<HistoryBitcoinDBModel> currencyQuery = currencyEntityManager.createQuery("SELECT p from HistoryBitcoinDBModel p where date < :dateParameter order by date DESC", HistoryBitcoinDBModel.class)
                 .setParameter("dateParameter", new SimpleDateFormat("yyyy-MM-dd").parse(dateFormat.format(dateParameter)))
                 .setMaxResults(predictions.size());
         ArrayList<HistoryBitcoinDBModel> currency = new ArrayList<>(currencyQuery.getResultList());
 
-
-
+        predictionEntityManager.close();
+        predictionsEntityManagerFactory.close();
+        currencyEntityManager.close();
+        currencyEntityManagerFactory.close();
+        System.out.println("Predykcje: \n");
+//        for(PredictionCurrencyDBModel f : predictions){
+//            System.out.println(f.toString());
+//        }
+//        System.out.println("Historyczne: \n");
+//        for(HistoryBitcoinDBModel f : currency){
+//            System.out.println(f.toString());
+//        }
         return ChartData.jsonParser(predictions, currency);
     }
 

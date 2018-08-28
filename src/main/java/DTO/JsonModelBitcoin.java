@@ -3,8 +3,9 @@ package DTO;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
-import java.util.Date;
+//import java.util.Date;
 import java.util.Calendar;
+import java.sql.Date;
 
 public class JsonModelBitcoin {
 

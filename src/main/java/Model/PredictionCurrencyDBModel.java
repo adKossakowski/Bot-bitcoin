@@ -6,7 +6,7 @@ import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import java.math.BigDecimal;
-import java.util.Date;
+import java.sql.Date;
 import java.util.Objects;
 
 @Entity
@@ -82,5 +82,16 @@ public class PredictionCurrencyDBModel {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    @Override
+    public String toString() {
+        return "PredictionCurrencyDBModel{" +
+                "unix_time=" + unix_time +
+                ", currency='" + currency + '\'' +
+                ", price=" + price +
+                ", isUse=" + isUse +
+                ", date=" + date +
+                '}';
     }
 }

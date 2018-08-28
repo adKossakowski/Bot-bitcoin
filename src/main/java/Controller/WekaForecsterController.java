@@ -14,6 +14,7 @@ import weka.core.converters.CSVLoader;
 import javax.persistence.*;
 import javax.swing.*;
 import java.io.File;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -149,10 +150,10 @@ public class WekaForecsterController {
             PredictionCurrencyDBModel bitcoinObj = new PredictionCurrencyDBModel();
             bitcoinObj.setUnix_time(unixTime);
 
-            bitcoinObj.setPrice(predForTarget.predicted());
+            bitcoinObj.setPrice(new BigDecimal(predForTarget.predicted()));
             bitcoinObj.setCurrency("USD");
             bitcoinObj.setUse(false);
-            bitcoinObj.setDate(new java.util.Date(unixTime*1000L));
+            bitcoinObj.setDate(new java.sql.Date(new java.util.Date(unixTime*1000L).getTime()));
             unixTime+=86400;
             SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd");
             String s = dt.format(bitcoinObj.getDate());

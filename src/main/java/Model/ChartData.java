@@ -1,6 +1,6 @@
 package Model;
 
-import javafx.print.Collation;
+//import javafx.print.Collation;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,8 +39,9 @@ public class ChartData {
 //        Collections.sort(predictions, (PredictionCurrencyDBModel a, PredictionCurrencyDBModel b) -> {return a.getDate().compareTo(b.getDate())});
         //https://stackoverflow.com/questions/2784514/sort-arraylist-of-custom-objects-by-property
 //        Arrays.sort(currency, (HistoryBitcoinDBModel a,HistoryBitcoinDBModel b) -> a.getDate().compareTo(b.getDate()));
-        Collections.sort(predictions, PredictionCurrencyDBModel::compare);
-        Collections.sort(currency, HistoryBitcoinDBModel::compare);
+//        Collections.sort(predictions, PredictionCurrencyDBModel::compare);
+//        Collections.sort(currency, HistoryBitcoinDBModel::compare);
+        Collections.reverse(currency);
         ArrayList<ChartDataJson> r = new ArrayList<>();
         for (PredictionCurrencyDBModel p: predictions
              ) {
