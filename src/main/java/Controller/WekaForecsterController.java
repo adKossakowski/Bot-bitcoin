@@ -45,10 +45,21 @@ public class WekaForecsterController {
         entityManager_pp.close();
         entityMangerFactory_pp.close();
         System.out.println(predictionParameters.toString());
-        int train_size = predictionParameters.getTrain_size();
-        int test_size = predictionParameters.getTest_size();
-        int start_idx=1;
-        int window_size = predictionParameters.getWindow_size();
+        int train_size;
+        int test_size;
+        int start_idx;
+        int window_size;
+        if(predictionParameters != null) {
+            train_size = predictionParameters.getTrain_size();
+            test_size = predictionParameters.getTest_size();
+            start_idx = 1;
+            window_size = predictionParameters.getWindow_size();
+        }else{
+            train_size = 74;
+            test_size = 73;
+            start_idx = 1;
+            window_size = 1;
+        }
 
         Instances train = new Instances(data, start_idx, train_size);
         Instances test = new Instances(data, start_idx+train_size+1, test_size);
@@ -68,9 +79,9 @@ public class WekaForecsterController {
 
         // new forecaster
         WekaForecaster forecaster = new WekaForecaster();
-        forecaster.setFieldsToForecast("price");
 
-        SMOreg svm_reg=new SMOreg();
+        SMOreg svm_reg=new SMOreg();  forecaster.setFieldsToForecast("price");
+
         //String[] svm_options = weka.core.Utils.splitOptions("-C 1.0 -N 0 -I \"weka.classifiers.functions.supportVector.RegSMOImproved -T 0.001 -V -P 1.0E-12 -L 0.001 -W 1\" " +
         //		"-K \"weka.classifiers.functions.supportVector.PolyKernel -E 1.0 -L -C 250007\"");
         //svm_reg.setOptions(svm_options);
@@ -141,26 +152,32 @@ public class WekaForecsterController {
 //        Query query = entityManager.createNativeQuery("truncate table PredictionCurrencyDBModel");
 //        query.executeUpdate();
 
-        long unixTime = System.currentTimeMillis() / 1000L;
+//        long unixTime = System.currentTimeMillis() / 1000L;
 
+        EntityManagerFactory emf_date = Persistence.createEntityManagerFactory("bitcoin_history_table");
+        EntityManager em_date = emf_date.createEntityManager();
+        java.sql.Date hist_date = new java.sql.Date(em_date.createQuery("Select date from HistoryBitcoinDBModel order by date desc", Date.class)
+                .setMaxResults(1).getSingleResult().getTime());
+        hist_date = BotTableController.addDays(hist_date, 1);
         for (int i = 0; i < forecast.size(); i++) {
             List<NumericPrediction> predsAtStep = forecast.get(i);
             NumericPrediction predForTarget = predsAtStep.get(0);
             System.out.println("" + predForTarget.predicted() + " ");
             PredictionCurrencyDBModel bitcoinObj = new PredictionCurrencyDBModel();
-            bitcoinObj.setUnix_time(unixTime);
+            bitcoinObj.setUnix_time(hist_date.getTime()/1000L);
 
             bitcoinObj.setPrice(new BigDecimal(predForTarget.predicted()));
             bitcoinObj.setCurrency("USD");
             bitcoinObj.setUse(false);
-            bitcoinObj.setDate(new java.sql.Date(new java.util.Date(unixTime*1000L).getTime()));
-            unixTime+=86400;
+            bitcoinObj.setDate(hist_date);
+            System.out.println("Date: \t " + bitcoinObj.getDate() + " " + hist_date);
+            hist_date = BotTableController.addDays(hist_date, 1);
             SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd");
             String s = dt.format(bitcoinObj.getDate());
             DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
             Date query_date = format.parse(s);
             entityManager.getTransaction().begin();
-            PredictionCurrencyDBModel is_exist = entityManager.find(PredictionCurrencyDBModel.class, query_date);
+            PredictionCurrencyDBModel is_exist = entityManager.find(PredictionCurrencyDBModel.class, bitcoinObj.getDate());
             if (is_exist != null){
                 is_exist.setPrice(bitcoinObj.getPrice());
             }else{

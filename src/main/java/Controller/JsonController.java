@@ -86,30 +86,31 @@ public class JsonController {
         System.out.println("DB update success");
     }
 
+
     private void updateToday(int days){
-        StringBuffer sb = new StringBuffer("https://blockchain.info/charts/market-price?timespan=" + days + "days&format=json");
+        StringBuffer sb = new StringBuffer("https://blockchain.info/charts/market-price?timespan=" + (days-1) + "days&format=json");
         RestTemplate restTemplate = new RestTemplate();
         jsonUpdate = restTemplate.getForObject(sb.toString(), HistoryJsonUpdate.class);
         System.out.println(jsonUpdate.toString());
         ArrayList<JsonModelBitcoin> bitcoinArrayList = jsonUpdate.getJsonModelArrayList();
-//        EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
-//        EntityManager entityManager = entityMangerFactory.createEntityManager();
+        EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
+        EntityManager entityManager = entityMangerFactory.createEntityManager();
         for(JsonModelBitcoin item: bitcoinArrayList) {
             bitcoinObj = new HistoryBitcoinDBModel(jsonUpdate.getCurrency(), item.getBitcoinPrice(),  item.getUnixTime(), item.unixTimeToDate());
-//            try {
-////                System.out.println("Entity manager transaction started");
-////                entityManager.getTransaction().begin();
-////                entityManager.persist(bitcoinObj);
-////                entityManager.getTransaction().commit();
-////                System.out.println(bitcoinObj.toString() + "update db succedded");
-////            } catch (Exception e) {
-////                logger.error("Cannot update jdbc for caused by: ");
-////                e.printStackTrace();
-////            }
+            try {
+                System.out.println("Entity manager transaction started");
+                entityManager.getTransaction().begin();
+                entityManager.persist(bitcoinObj);
+                entityManager.getTransaction().commit();
+                System.out.println(bitcoinObj.toString() + "update db succedded");
+            } catch (Exception e) {
+                logger.error("Cannot update jdbc for caused by: ");
+                e.printStackTrace();
+            }
             System.out.println(bitcoinObj.toString());
         }
-//        entityManager.close();
-//        entityMangerFactory.close();
+        entityManager.close();
+        entityMangerFactory.close();
     }
 
     private HistoryBitcoinDBModel getLastHistoryBitcoinDBModel(){
@@ -139,6 +140,7 @@ public class JsonController {
             this.updateToday((int)TimeUnit.DAYS.convert(daydiff, TimeUnit.MILLISECONDS));
         }
         BotTableController botTableController = new BotTableController();
+        botTableController.botTableController();
     }
 
     @GetMapping("defaultPrediction")//wywwołanie predykcji dla ostatnich danych z bazy
@@ -194,7 +196,7 @@ public class JsonController {
         return new Money(currencyDBModel.getCurrency(), currencyDBModel.getPrice());
     }
 
-    @GetMapping("chartData")//pobiera dane do wykresu
+    @GetMapping(value="chartData", produces = MediaType.APPLICATION_JSON_VALUE)//pobiera dane do wykresu
     public ArrayList<ChartDataJson> getChartData() throws Exception {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         Date dateParameter = new Date();
@@ -224,6 +226,43 @@ public class JsonController {
 //            System.out.println(f.toString());
 //        }
         return ChartData.jsonParser(predictions, currency);
+    }
+
+    @GetMapping(value="getBotData", produces = MediaType.APPLICATION_JSON_VALUE)
+    public BotJson getBotJson(){
+        BotJson botJson = new BotJson();
+        EntityManagerFactory emf_bot_table = Persistence.createEntityManagerFactory("bot_table");
+        EntityManager em_bot_table = emf_bot_table.createEntityManager();
+        BotTableDB botTableDB = em_bot_table.createQuery("select bot from BotTableDB bot order by date desc", BotTableDB.class)
+                .setMaxResults(1).getSingleResult();
+        if(botTableDB.getCurrency().equals("BTC")){
+            botJson.setBitcoins(botTableDB.getMoney());
+            botJson.setMoney(new BigDecimal(0));
+        }else{
+            botJson.setMoney(botTableDB.getMoney());
+            botJson.setBitcoins(new BigDecimal(0));
+        }
+        EntityManagerFactory emf_bitcoin_history = Persistence.createEntityManagerFactory("bitcoin_history_table");
+        EntityManager em_bitcoin_history = emf_bitcoin_history.createEntityManager();
+
+        HistoryBitcoinDBModel historyBitcoinDBModel = em_bitcoin_history.createQuery("select bit from HistoryBitcoinDBModel bit order by date desc", HistoryBitcoinDBModel.class)
+                .setMaxResults(1).getSingleResult();
+
+        EntityManagerFactory emf_prediction = Persistence.createEntityManagerFactory("prediction_bitcoin_currency_table");
+        EntityManager em_bitcoin_prediction = emf_bitcoin_history.createEntityManager();
+        PredictionCurrencyDBModel currencyDBModel = em_bitcoin_prediction.createQuery("select pred from PredictionCurrencyDBModel pred where date = :dateParameter", PredictionCurrencyDBModel.class)
+                .setParameter("dateParameter", historyBitcoinDBModel.getDate()).setMaxResults(1).getSingleResult();
+
+        em_bitcoin_history.close();
+        em_bitcoin_prediction.close();
+        em_bot_table.close();
+        emf_bitcoin_history.close();
+        emf_bot_table.close();
+        emf_prediction.close();
+
+        botJson.setOstatniKurs(historyBitcoinDBModel.getPrice());
+        botJson.setOstatniePrzewidywania(currencyDBModel.getPrice());
+        return botJson;
     }
 
 }

@@ -17,21 +17,25 @@ public class BotTableDB {
 
     private BigDecimal money;
 
-    private String typeOfUsage;
+    private String type_of_usage;
 
     public String getTypeOfUsage() {
-        return typeOfUsage;
+        return type_of_usage;
     }
 
     public void setTypeOfUsage(String typeOfUsage) {
-        this.typeOfUsage = typeOfUsage;
+        this.type_of_usage = typeOfUsage;
     }
+
+    public BotTableDB() {
+    }
+
 
     public BotTableDB(Date date, String currency, BigDecimal money, String typeOfUsage) {
         this.date = date;
         this.currency = currency;
         this.money = money;
-        this.typeOfUsage = typeOfUsage;
+        this.type_of_usage = typeOfUsage;
     }
 
     public Date getDate() {
@@ -56,5 +60,15 @@ public class BotTableDB {
 
     public void setMoney(BigDecimal money) {
         this.money = money;
+    }
+
+    @Override
+    public String toString() {
+        return "BotTableDB{" +
+                "date=" + date +
+                ", currency='" + currency + '\'' +
+                ", money=" + money +
+                ", typeOfUsage='" + type_of_usage + '\'' +
+                '}';
     }
 }
