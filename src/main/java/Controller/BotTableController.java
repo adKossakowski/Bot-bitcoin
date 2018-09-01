@@ -47,7 +47,6 @@ public class BotTableController {
         System.out.println("updateTable start");
         EntityManagerFactory emf_history = Persistence.createEntityManagerFactory("bitcoin_history_table");
         EntityManager em_history = emf_history.createEntityManager();
-        System.out.println("warunek daty w updateTable start " + this.bot_table.get(bot_table.size()-1).getDate()+" ==" +" " + new java.sql.Date(new java.util.Date().getTime() - 1));
         if(this.bot_table.get(bot_table.size()-1).getDate() == new java.sql.Date(new java.util.Date().getTime() - 1)){
             return ;
         } else {
@@ -64,10 +63,10 @@ public class BotTableController {
                 int decision = checkLastTwo(this.addDays(bot_table_date,1));
                 if(decision <= 0){
                     System.out.println("Sell");
-                    this.sell(bot_table_date);
+//                    this.sell(this.addDays(bot_table_date,1));
                 }else{
                     System.out.println("Buy");
-                    this.buy(bot_table_date);
+//                    this.buy(this.addDays(bot_table_date,1));
                 }
                 bot_table_date = this.addDays(bot_table_date,1);
             }
@@ -86,13 +85,17 @@ public class BotTableController {
         if((ratesList.size()<= 1) || (ratesList.get(0).intValue() < 0) || (ratesList.get(1).intValue() < 0)){
             try {
                 System.out.println("Prediction reload");
-//                TMPController.create_file_with_data();
-//                WekaForecsterController wekaForecsterController = new WekaForecsterController();
-//                wekaForecsterController.forecastTimeSeries();
+                TMPController.create_file_with_data();
+                WekaForecsterController wekaForecsterController = new WekaForecsterController();
+                wekaForecsterController.forecastTimeSeries();
+                ratesList = em_prediction.createQuery("Select price from PredictionCurrencyDBModel where date <= :dateParameter order by date DESC", BigDecimal.class)
+                        .setParameter("dateParameter", dateParameter).setMaxResults(2).getResultList();
             }catch(Exception e){
                 e.printStackTrace();
             }
-            return -1;
+            if((ratesList.size()<= 1) || (ratesList.get(0).intValue() < 0) || (ratesList.get(1).intValue() < 0)) {
+                return -1;
+            }
         }
         System.out.println("Prediction wynik " + ratesList.get(0).subtract(ratesList.get(1)).intValue());
         return ratesList.get(0).subtract(ratesList.get(1)).intValue();
@@ -109,43 +112,6 @@ public class BotTableController {
         c.setTime(date);
         c.add(Calendar.DATE, days);
         return new Date(c.getTimeInMillis());
-    }
-
-    public static Date rollDays(Date date, int days){
-        Calendar c = Calendar.getInstance();
-        c.setTime(date);
-        c.roll(Calendar.DATE, false);
-        return new Date(c.getTimeInMillis());
-    }
-
-    private void sell(Date date){
-        BotTableDB botTableDB;
-        BotTableDB tableDB = em_bot_table.createQuery("Select t from BotTableDB t order by t.date desc", BotTableDB.class).setMaxResults(1).getSingleResult();
-        if(tableDB.getCurrency().equals("BTC")){
-           BigDecimal money = tableDB.getMoney().multiply(this.getLastHistoryRate(date), new MathContext(4));
-            botTableDB = new BotTableDB(date, "USD", money, "BUY");
-        }else{
-            botTableDB = new BotTableDB(date, "USD", tableDB.getMoney(), "KEEP");
-        }
-        System.out.println("Sell method " + botTableDB.toString());
-//        em_bot_table.persist(botTableDB);
-    }
-
-    private void buy(Date date){
-        System.out.println("buy method start");
-        BotTableDB botTableDB;
-        BotTableDB tableDB = em_bot_table.createQuery("Select t from BotTableDB t order by t.date desc", BotTableDB.class).setMaxResults(1).getSingleResult();
-        if(tableDB.getCurrency().equals("USD")){
-            System.out.println(date);
-            System.out.println(tableDB.toString());
-            System.out.println(this.getLastHistoryRate(date));
-            BigDecimal money = tableDB.getMoney().divide(this.getLastHistoryRate(date), new MathContext(4));
-            botTableDB = new BotTableDB(date, "BTC", money, "SELL");
-        }else{
-            botTableDB = new BotTableDB(date, "BTC", tableDB.getMoney(), "KEEP");
-        }
-        System.out.println("Buy method " + botTableDB.toString());
-//        em_bot_table.persist(botTableDB);
     }
 
 }

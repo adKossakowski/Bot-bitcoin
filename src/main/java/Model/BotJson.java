@@ -4,10 +4,6 @@ import java.math.BigDecimal;
 
 public class BotJson {
 
-    private BigDecimal Money;
-
-    private BigDecimal Bitcoins;
-
     private BigDecimal ostatniKurs;
 
     private BigDecimal ostatniePrzewidywania;
@@ -15,29 +11,10 @@ public class BotJson {
     public BotJson() {
     }
 
-    public BotJson(BigDecimal money, BigDecimal bitcoins, BigDecimal ostatniKurs, BigDecimal ostatniePrzewidywania) {
-        Money = money;
-        Bitcoins = bitcoins;
+    public BotJson(BigDecimal ostatniKurs, BigDecimal ostatniePrzewidywania) {
         this.ostatniKurs = ostatniKurs;
         this.ostatniePrzewidywania = ostatniePrzewidywania;
     }
-
-    public BigDecimal getMoney() {
-        return Money;
-    }
-
-    public void setMoney(BigDecimal money) {
-        Money = money;
-    }
-
-    public BigDecimal getBitcoins() {
-        return Bitcoins;
-    }
-
-    public void setBitcoins(BigDecimal bitcoins) {
-        Bitcoins = bitcoins;
-    }
-
     public BigDecimal getOstatniKurs() {
         return ostatniKurs;
     }
@@ -57,8 +34,6 @@ public class BotJson {
     @Override
     public String toString() {
         return "BotJson{" +
-                "Money=" + Money +
-                ", Bitcoins=" + Bitcoins +
                 ", ostatniKurs=" + ostatniKurs +
                 ", ostatniePrzewidywania=" + ostatniePrzewidywania +
                 '}';

@@ -1,12 +1,11 @@
 package Controller;
 
-import DTO.HistoryJsonUpdate;
-import DTO.JsonBitcoin;
-import DTO.JsonModelBitcoin;
+import Model.HistoryJsonUpdate;
+import Model.JsonBitcoin;
+import Model.JsonModelBitcoin;
 import Model.*;
 //import com.sun.xml.internal.xsom.impl.scd.Iterators;
 import org.apache.commons.math3.exception.NullArgumentException;
-import org.apache.log4j.Logger;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +20,6 @@ import java.util.Date;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
@@ -29,11 +27,7 @@ import java.util.concurrent.TimeUnit;
 @RequestMapping("/currency")
 public class JsonController {
 
-    Logger logger;
-
-    RestTemplate restTemplate;
     HistoryJsonUpdate jsonUpdate;
-    EntityManagerFactory entityMangerFactory;
     HistoryBitcoinDBModel bitcoinObj;
 
     @GetMapping(value="predictionParamters", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -104,8 +98,7 @@ public class JsonController {
                 entityManager.getTransaction().commit();
                 System.out.println(bitcoinObj.toString() + "update db succedded");
             } catch (Exception e) {
-                logger.error("Cannot update jdbc for caused by: ");
-                e.printStackTrace();
+               System.out.println(e.toString());
             }
             System.out.println(bitcoinObj.toString());
         }
@@ -122,8 +115,7 @@ public class JsonController {
     }
 
     private HistoryBitcoinDBModel reload_HistoryBitcoinDBModel(){
-        System.out.println("this.updateJdbc()");
-//        this.updateJdbc();
+        this.updateJdbc();
         return this.getLastHistoryBitcoinDBModel();
     }
 
@@ -139,8 +131,6 @@ public class JsonController {
             long daydiff = new java.sql.Date(utilDate.getTime() - 1).getTime() - last_history_rate.getDate().getTime();
             this.updateToday((int)TimeUnit.DAYS.convert(daydiff, TimeUnit.MILLISECONDS));
         }
-        BotTableController botTableController = new BotTableController();
-        botTableController.botTableController();
     }
 
     @GetMapping("defaultPrediction")//wywwołanie predykcji dla ostatnich danych z bazy
@@ -166,7 +156,7 @@ public class JsonController {
         wekaForecsterController.forecastTimeSeries();
     }
 
-    @GetMapping("database")
+    @GetMapping("getPrediction")
     public Money getPrediction() throws Exception {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 //        Calendar dateParameter = Calendar.getInstance();
@@ -218,30 +208,19 @@ public class JsonController {
         currencyEntityManager.close();
         currencyEntityManagerFactory.close();
         System.out.println("Predykcje: \n");
-//        for(PredictionCurrencyDBModel f : predictions){
-//            System.out.println(f.toString());
-//        }
-//        System.out.println("Historyczne: \n");
-//        for(HistoryBitcoinDBModel f : currency){
-//            System.out.println(f.toString());
-//        }
+        for(PredictionCurrencyDBModel f : predictions){
+            System.out.println(f.toString());
+        }
+        System.out.println("Historyczne: \n");
+        for(HistoryBitcoinDBModel f : currency){
+            System.out.println(f.toString());
+        }
         return ChartData.jsonParser(predictions, currency);
     }
 
     @GetMapping(value="getBotData", produces = MediaType.APPLICATION_JSON_VALUE)
     public BotJson getBotJson(){
         BotJson botJson = new BotJson();
-        EntityManagerFactory emf_bot_table = Persistence.createEntityManagerFactory("bot_table");
-        EntityManager em_bot_table = emf_bot_table.createEntityManager();
-        BotTableDB botTableDB = em_bot_table.createQuery("select bot from BotTableDB bot order by date desc", BotTableDB.class)
-                .setMaxResults(1).getSingleResult();
-        if(botTableDB.getCurrency().equals("BTC")){
-            botJson.setBitcoins(botTableDB.getMoney());
-            botJson.setMoney(new BigDecimal(0));
-        }else{
-            botJson.setMoney(botTableDB.getMoney());
-            botJson.setBitcoins(new BigDecimal(0));
-        }
         EntityManagerFactory emf_bitcoin_history = Persistence.createEntityManagerFactory("bitcoin_history_table");
         EntityManager em_bitcoin_history = emf_bitcoin_history.createEntityManager();
 
@@ -255,9 +234,7 @@ public class JsonController {
 
         em_bitcoin_history.close();
         em_bitcoin_prediction.close();
-        em_bot_table.close();
         emf_bitcoin_history.close();
-        emf_bot_table.close();
         emf_prediction.close();
 
         botJson.setOstatniKurs(historyBitcoinDBModel.getPrice());
