@@ -8,6 +8,7 @@ import Model.*;
 import org.apache.commons.math3.exception.NullArgumentException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -25,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/currency")
-public class JsonController {
+public class MainController {
 
     HistoryJsonUpdate jsonUpdate;
     HistoryBitcoinDBModel bitcoinObj;
@@ -44,19 +45,11 @@ public class JsonController {
 
     @GetMapping(value = "/update")
     public void updateCurrency(){
-
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
         RestTemplate restTemplate = new RestTemplate();
         JsonBitcoin currencyJson = restTemplate.getForObject("https://blockchain.info/pl/ticker", JsonBitcoin.class);
         System.out.println(currencyJson.toString());
-
-    }
-
-    @PostMapping("updateBotTable")
-    public void postBotMoney(){
-        EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
-        EntityManager entityManager = entityMangerFactory.createEntityManager();
     }
 
     @GetMapping("updateJdbc")
@@ -65,7 +58,6 @@ public class JsonController {
         jsonUpdate = restTemplate.getForObject("https://blockchain.info/charts/market-price?timespan=7years&format=json", HistoryJsonUpdate.class);
         System.out.println("RestTemplate stop");
         ArrayList<JsonModelBitcoin> bitcoinArrayList = jsonUpdate.getJsonModelArrayList();
-//        System.out.println(jsonUpdate.toString());
         EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("bitcoin_history_table");
         EntityManager entityManager = entityMangerFactory.createEntityManager();
         for(JsonModelBitcoin item: bitcoinArrayList){
@@ -134,26 +126,29 @@ public class JsonController {
     }
 
     @GetMapping("defaultPrediction")//wywwołanie predykcji dla ostatnich danych z bazy
-    public void setPrediction() throws Exception{
+    public void newPrediction() throws Exception{
         TMPController.create_file_with_data();
         WekaForecsterController wekaForecsterController = new WekaForecsterController();
         wekaForecsterController.forecastTimeSeries();
     }
 
-    @GetMapping("dedicatedPrediction")//zmienienie danych do predykcji i wywołanie predykcji
-    public void setPredictionWithParameters(@PathVariable("trainingSet") int trainingSet,
-                                            @PathVariable("testingSet") int testingSet,
-                                            @PathVariable("predictionWindow") int predictionWindow) throws Exception{
-
-        EntityManagerFactory entityMangerFactory_pp = Persistence.createEntityManagerFactory("prediction_parameters");
-        EntityManager entityManager_pp = entityMangerFactory_pp.createEntityManager();
-        PredictionParametersModel pp = new PredictionParametersModel(trainingSet, testingSet, predictionWindow, new Date());
-        entityManager_pp.persist(pp);
-        entityManager_pp.close();
-        entityMangerFactory_pp.close();
-        TMPController.create_file_with_data();
-        WekaForecsterController wekaForecsterController = new WekaForecsterController();
-        wekaForecsterController.forecastTimeSeries();
+    @CrossOrigin(origins = "http://localhost:4200")
+    @GetMapping("dedicatedPrediction")//zmienienie danych do predykcji
+    public void newPredictionWithParameters(@RequestParam ("trainSet") int trainingSet,
+                                            @RequestParam ("testSet") int testingSet,
+                                            @RequestParam ("predWindow") int predictionWindow) throws Exception{
+        if(trainingSet > testingSet * predictionWindow) {
+            System.out.println("Dobrze");
+            EntityManagerFactory entityMangerFactory_pp = Persistence.createEntityManagerFactory("prediction_parameters");
+            EntityManager entityManager_pp = entityMangerFactory_pp.createEntityManager();
+            PredictionParametersModel pp = new PredictionParametersModel(trainingSet, testingSet, predictionWindow, new Date());
+            entityManager_pp.getTransaction().begin();
+            entityManager_pp.persist(pp);
+            entityManager_pp.getTransaction().commit();
+            entityManager_pp.close();
+            entityMangerFactory_pp.close();
+        }
+        System.out.println("zle");
     }
 
     @GetMapping("getPrediction")
@@ -169,23 +164,25 @@ public class JsonController {
             try {
                 currencyDBModel = query.getSingleResult();
                 if (currencyDBModel == null) {
-                    setPrediction();
+                    newPrediction();
                 }
                 if (currencyDBModel.getPrice().compareTo(new BigDecimal(0)) <= 0) {
-                    setPrediction();
+                    newPrediction();
                 } else {
                     break;
                 }
             } catch (NullPointerException e) {
-                setPrediction();
+                newPrediction();
             } catch (NullArgumentException e) {
-                setPrediction();
+                newPrediction();
             }
         } while(true);
 
         return new Money(currencyDBModel.getCurrency(), currencyDBModel.getPrice());
     }
 
+//    @Async
+    @CrossOrigin(origins = "http://localhost:4200")
     @GetMapping(value="chartData", produces = MediaType.APPLICATION_JSON_VALUE)//pobiera dane do wykresu
     public ArrayList<ChartDataJson> getChartData() throws Exception {
         DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");

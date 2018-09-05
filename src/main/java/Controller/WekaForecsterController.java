@@ -29,11 +29,8 @@ public class WekaForecsterController {
         Instances data = loader.getDataSet();
         System.out.println("liczba atrybutów="+data.numAttributes()
                 +", liczba obserwacji="+data.numInstances());
-        //liczba atrybutów=4, liczba obserwacji=8733
         System.out.println(data.firstInstance());
-        //1,01/02/2014,0,24.25
         System.out.println(data.lastInstance());
-        //8733,31/12/2014,23,11.25
         System.out.println(data.toSummaryString());
 
 //        train_size > test_size*window_size
@@ -64,24 +61,15 @@ public class WekaForecsterController {
         Instances train = new Instances(data, start_idx, train_size);
         Instances test = new Instances(data, start_idx+train_size+1, test_size);
 
-		 /*ArffSaver s= new ArffSaver();
-		 s.setInstances(train);
-		 s.setFile(new File("train.arff"));
-		 s.writeBatch();
-		 */
-
         for (int i = 0; i < test.numInstances(); i++)
         {
             System.out.println(test.instance(i));
         }
 
-
-
         // new forecaster
         WekaForecaster forecaster = new WekaForecaster();
 
         SMOreg svm_reg=new SMOreg();  forecaster.setFieldsToForecast("price");
-
         //String[] svm_options = weka.core.Utils.splitOptions("-C 1.0 -N 0 -I \"weka.classifiers.functions.supportVector.RegSMOImproved -T 0.001 -V -P 1.0E-12 -L 0.001 -W 1\" " +
         //		"-K \"weka.classifiers.functions.supportVector.PolyKernel -E 1.0 -L -C 250007\"");
         //svm_reg.setOptions(svm_options);
@@ -122,37 +110,18 @@ public class WekaForecsterController {
             System.out.println();
         }
 
-
         Instances data_eval = new Instances(data, start_idx, train_size+test_size);
 
         TSEvaluation tse = new TSEvaluation(data_eval, test_size);
         tse.setHorizon(test_size);
         tse.setPrimeWindowSize(test_size*window_size);
 
-        System.out.println(tse.getEvaluateOnTestData());
-        System.out.println(tse.getEvaluateOnTrainingData());
-        System.out.println(tse.getEvaluationModules());
-        System.out.println(tse.getPrimeForTestDataWithTestData());
-        System.out.println(tse.getPrimeWindowSize());
-
         tse.evaluateForecaster(forecaster, System.out);
-        System.out.println(tse.toSummaryString());
 
-        List<String> targets=new ArrayList<String>();
-        targets.add("flow");
-
-        List<Integer> steps= new ArrayList<Integer>();
-        steps.add(test_size);
         System.out.println("Ending of prediction");
         // output the predictions
         EntityManagerFactory entityMangerFactory = Persistence.createEntityManagerFactory("prediction_bitcoin_currency_table");
         EntityManager entityManager = entityMangerFactory.createEntityManager();
-        //teuncate table before new insertion
-
-//        Query query = entityManager.createNativeQuery("truncate table PredictionCurrencyDBModel");
-//        query.executeUpdate();
-
-//        long unixTime = System.currentTimeMillis() / 1000L;
 
         EntityManagerFactory emf_date = Persistence.createEntityManagerFactory("bitcoin_history_table");
         EntityManager em_date = emf_date.createEntityManager();
@@ -186,19 +155,6 @@ public class WekaForecsterController {
             entityManager.getTransaction().commit();
         }
         entityManager.close();
-
-//        JFreeChartDriver driver= new JFreeChartDriver();
-//        //JPanel panel=tse.graphFutureForecastOnTraining(driver, forecaster,targets);
-//        JPanel panel=tse.graphPredictionsForStepsOnTraining(driver.getDefaultDriver(), (TSForecaster)forecaster, "price",steps , 0);
-//        driver.saveChartToFile(panel, "wykres_czasu_flow.png", 1200, 800);
-//
-//        JFrame frame = new JFrame();
-//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(panel);
-//        panel.setLayout(layout);
-//        frame.setSize(1600, 1000);
-//        frame.add(panel);
-//        frame.setVisible(true);
 
     }
 
