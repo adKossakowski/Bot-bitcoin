@@ -138,7 +138,6 @@ public class MainController {
                                             @RequestParam ("testSet") int testingSet,
                                             @RequestParam ("predWindow") int predictionWindow) throws Exception{
         if(trainingSet > testingSet * predictionWindow) {
-            System.out.println("Dobrze");
             EntityManagerFactory entityMangerFactory_pp = Persistence.createEntityManagerFactory("prediction_parameters");
             EntityManager entityManager_pp = entityMangerFactory_pp.createEntityManager();
             PredictionParametersModel pp = new PredictionParametersModel(trainingSet, testingSet, predictionWindow, new Date());
@@ -148,7 +147,6 @@ public class MainController {
             entityManager_pp.close();
             entityMangerFactory_pp.close();
         }
-        System.out.println("zle");
     }
 
     @GetMapping("getPrediction")
