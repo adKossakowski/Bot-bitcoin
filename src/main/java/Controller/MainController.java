@@ -240,6 +240,4 @@ public class MainController {
     }
 
 }
-//https://blockchain.info/charts/market-price?timespan=9years&format=json
-//https://blockchain.info/charts/market-price?format=json
-//http://api.bitcoincharts.com/v1/trades.csv?symbol=krakenUSD&start=16022018
+

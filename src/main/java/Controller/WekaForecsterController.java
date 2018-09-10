@@ -70,12 +70,6 @@ public class WekaForecsterController {
         WekaForecaster forecaster = new WekaForecaster();
 
         SMOreg svm_reg=new SMOreg();  forecaster.setFieldsToForecast("price");
-        //String[] svm_options = weka.core.Utils.splitOptions("-C 1.0 -N 0 -I \"weka.classifiers.functions.supportVector.RegSMOImproved -T 0.001 -V -P 1.0E-12 -L 0.001 -W 1\" " +
-        //		"-K \"weka.classifiers.functions.supportVector.PolyKernel -E 1.0 -L -C 250007\"");
-        //svm_reg.setOptions(svm_options);
-        //Kernel ker=svm_reg.getKernel();
-        //String[] svm_options = weka.core.Utils.splitOptions("-E 2");
-        //svm_reg.setOptions(svm_options);
 
         forecaster.setBaseForecaster(svm_reg);
         forecaster.getTSLagMaker().setMinLag(1);
@@ -88,8 +82,6 @@ public class WekaForecsterController {
 
         List<List<NumericPrediction>> forecast = forecaster.forecast(test_size, System.out);
 
-        // output the predictions. Outer list is over the steps; inner list is over
-        // the targets
         for (int i = 0; i < test_size; i++) {
             List<NumericPrediction> predsAtStep = forecast.get(i);
             double predicted = predsAtStep.get(0).predicted();
@@ -158,119 +150,4 @@ public class WekaForecsterController {
 
     }
 
-    public void testPrediction() throws Exception{
-        CSVLoader loader = new CSVLoader();
-        loader.setSource(new File("2014 MIDAS Site 10 AL1811 per hour.csv"));
-        Instances data = loader.getDataSet();
-        System.out.println("liczba atrybutów="+data.numAttributes()
-                +", liczba obserwacji="+data.numInstances());
-        //liczba atrybutów=4, liczba obserwacji=8733
-        System.out.println(data.firstInstance());
-        //1,01/02/2014,0,24.25
-        System.out.println(data.lastInstance());
-        //8733,31/12/2014,23,11.25
-        System.out.println(data.toSummaryString());
-
-        int train_size=30*24;
-        int test_size=4*24;
-        int start_idx=4000;
-        int window_size=4;
-
-        Instances train = new Instances(data, start_idx, train_size);
-        Instances test = new Instances(data, start_idx+train_size+1, test_size);
-
-		 /*ArffSaver s= new ArffSaver();
-		 s.setInstances(train);
-		 s.setFile(new File("train.arff"));
-		 s.writeBatch();
-		 */
-
-        for (int i = 0; i < test.numInstances(); i++)
-        {
-            System.out.println(test.instance(i));
-        }
-
-
-
-        // new forecaster
-        WekaForecaster forecaster = new WekaForecaster();
-        forecaster.setFieldsToForecast("flow");
-
-        SMOreg svm_reg=new SMOreg();
-        //String[] svm_options = weka.core.Utils.splitOptions("-C 1.0 -N 0 -I \"weka.classifiers.functions.supportVector.RegSMOImproved -T 0.001 -V -P 1.0E-12 -L 0.001 -W 1\" " +
-        //		"-K \"weka.classifiers.functions.supportVector.PolyKernel -E 1.0 -L -C 250007\"");
-        //svm_reg.setOptions(svm_options);
-        //Kernel ker=svm_reg.getKernel();
-        //String[] svm_options = weka.core.Utils.splitOptions("-E 2");
-        //svm_reg.setOptions(svm_options);
-
-        forecaster.setBaseForecaster(svm_reg);
-        forecaster.getTSLagMaker().setMinLag(1);
-        forecaster.getTSLagMaker().setMaxLag(test_size*window_size);
-        forecaster.getTSLagMaker().setTimeStampField("idx");
-
-        System.out.println("Przed predykcja");
-        forecaster.buildForecaster(train, System.out);
-        forecaster.primeForecaster(train);
-
-        List<List<NumericPrediction>> forecast = forecaster.forecast(test_size, System.out);
-
-        // output the predictions. Outer list is over the steps; inner list is over
-        // the targets
-        for (int i = 0; i < test_size; i++) {
-            List<NumericPrediction> predsAtStep = forecast.get(i);
-            double predicted = predsAtStep.get(0).predicted();
-            double predicted_round=Math.round(predicted *100.0)/100.0;
-
-            double actual=test.instance(i).value(test.attribute("flow"));
-            double actual_round=Math.round(actual *100.0)/100.0;
-
-            double abs_diff = Math.abs(predicted-actual);
-            double abs_diff_round=Math.round(abs_diff *10000.0)/10000.0;
-
-            System.out.print("" +  predicted_round
-                    + "\t "+ actual_round
-                    + "\t abs_diff="+abs_diff_round
-                    + "\t " + test.instance(i).stringValue(test.attribute("data"))
-                    + "\t " + test.instance(i).value(test.attribute("godzina"))
-            );
-            System.out.println();
-        }
-
-
-        Instances data_eval=new Instances(data, start_idx, train_size+test_size);
-
-        TSEvaluation tse=new TSEvaluation(data_eval, test_size);
-        tse.setHorizon(test_size);
-        tse.setPrimeWindowSize(test_size*window_size);
-
-        System.out.println(tse.getEvaluateOnTestData());
-        System.out.println(tse.getEvaluateOnTrainingData());
-        System.out.println(tse.getEvaluationModules());
-        System.out.println(tse.getPrimeForTestDataWithTestData());
-        System.out.println(tse.getPrimeWindowSize());
-
-        tse.evaluateForecaster(forecaster, System.out);
-        System.out.println(tse.toSummaryString());
-
-        List<String> targets=new ArrayList<String>();
-        targets.add("flow");
-
-        List<Integer> steps= new ArrayList<Integer>();
-        steps.add(test_size);
-
-        JFreeChartDriver driver= new JFreeChartDriver();
-        JPanel panel=tse.graphFutureForecastOnTraining(driver, forecaster,targets);
-        //JPanel panel=tse.graphPredictionsForStepsOnTraining(driver.getDefaultDriver(), (TSForecaster)forecaster, "temperatura",steps , 0);
-        driver.saveChartToFile(panel, "wykres_czasu_flow.png", 1200, 800);
-
-        JFrame frame = new JFrame();
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(panel);
-        panel.setLayout(layout);
-        frame.setSize(1600, 1000);
-        frame.add(panel);
-        frame.setVisible(true);
-
-    }
 }
